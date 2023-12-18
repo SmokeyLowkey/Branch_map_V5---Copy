@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+    {% load leaflet_tags %}
+    {% load geojson_tags %}
+
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+        <title>{{ title }} - BranchWatch</title>
+        <meta name="description" content="Yuriy - BranchWatch">
+
+        {% load static %}
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <!-- Bootstrap core css -->
+        <link rel="stylesheet" href="{% static 'app/mdb/css/bootstrap.min.css' %}">
+        <!-- Material Design Bootstrap -->
+        <link rel="stylesheet" href="{% static 'app/mdb/css/mdb.min.css' %}">
+
+        <!-- Your custom styles (optional) -->
+        <link rel="stylesheet" href="{% static 'app/mdb/css/style.css' %}">
+        <!-- L.Control.Sidebar -->
+        <link rel="stylesheet" href="{% static 'app/content/css/L.Control.Sidebar.css' %}">
+
+        <!-- <link rel="apple-touch-icon" href="apple-icon.png">
+        <link rel="shortcut icon" href="favicon.ico"> -->
+
+        {% leaflet_css %}
+
+        <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,600,700,800' rel='stylesheet' type='text/css'>
+
+        <style>
+            .leaflet-sidebar.left.visible {
+            left: 0; 
+            height: 30%;
+            width: 20%;
+            }
+            .leaflet-left {
+                left: 0 !important; 
+                top: 30%;  
+                transition: left 0.5s;
+            }
+            .leaflet-control-scale.leaflet-control{
+                top: 90% ;
+            }
+            .leaflet-sidebar.right.contact.visible {
+                /* Inherit styles from .leaflet-sidebar */
+                color: whitesmoke;
+                position: absolute;
+                overflow: auto;
+                height: 50%;
+                box-sizing: border-box;
+                padding: 10px;
+                /* z-index: 1000; */
+                bottom: 0;
+                
+                /* Any additional or overridden styles can go here */
+            }
+           
+
+            .leaflet-sidebar.right.branch-info.visible{
+                /* Inherit styles from .leaflet-sidebar */
+                color: whitesmoke;
+                position: absolute;
+                overflow: visible;
+                height: 50%;
+                box-sizing: border-box;
+                padding: 10px;
+                /* z-index: 1000; */
+                
+                /* Any additional or overridden styles can go here */
+            }
+           
+            .limited-expand {
+                width: 75% !important;  
+                height: 50% ; 
+                position: fixed !important;
+                top: 5% !important;   
+                bottom: calc(0% + 30px) !important;
+                right: 0% !important;  
+                overflow: auto;  /* Add scrolling if needed */
+            }
+            .exit-button {
+                width: 30px;
+                height: 30px;
+                text-align: center;
+                padding: 6px 0;
+                font-size: 12px;
+                cursor: pointer;
+                background-color: red;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                z-index: 1;
+                }
+            .fullscreen-button{    
+                width: 30px;
+                height: 30px;
+                text-align: center;
+                padding: 6px 0;
+                font-size: 12px;
+                cursor: pointer;
+                background-color: green;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                position: absolute;
+                top: 10px;
+                right: 50px;
+                z-index: 1;    
+            }
+           /* #newSidebar.collapsed {
+                /* Hide sidebar when it has the 'collapsed' class */
+                /* display: none; */
+           /* }*/
+            
+        </style>
+    <body>
+        <!-- sidebar -->
+        <div id="sidebar" style="position: sticky; overflow: auto;">
+            <!-- sidebar heading -->
+            <div id="sidebar-heading" style="margin:5px;">
+                <h4 style="display:inline;"><b style="color:rgb(255, 30, 30);">BRANCH </b>WATCH</h4>
+                
+            </div>
+            <div>
+            <h6> Branch List</h6>
+            <input type="checkbox" id="CFDivision" name="CFDivision" value="CF">
+            <label for="CFDivision">C&F Division</label>
+
+            <input type="checkbox" id="TTDivision" name="TTDivision" value="TT">
+            <label for="TTDivision">T&T Division</label>
+
+            <ul id="branch-list">
+
+            </ul>     
+            </div>
+            <br>
+            
+        </div>
+        <div id="new-sidebar" >
+            <button class="exit-button" id="new-exit-button">X</button>
+            <button class = "fullscreen-button" id="new-fullscreen-button" >[ ]</button>
+            <div id="new-sidebar-heading" style="margin:5px;">
+                <h4 style="display:inline;"><b style="color:rgb(255, 30, 30);">BRANCH </b>CONTACT</h4>
+                
+            </div>
+           
+            <div id="new-sidebar-content">
+                <!-- Sidebar content here -->
+            </div>
+            
+        </div>
+        
+        
+
+        <div id="sidebar-right">
+            <button class="exit-button" id="left-exit-button">X</button>
+            <button class = "fullscreen-button" id="right-fullscreen-button" >[ ]</button>
+            <div id="sidebar-heading"  style="margin:5px;">
+                <h4 style="display:inline;"><b style="color:rgb(255, 30, 30);">BRANCH</b> INFO</h4>
+                <div id="sidebar-content"> <!-- This is the new placeholder -->
+                    <!-- Content will go here -->
+                </div>
+            </div>
+        </div>
+
+        {% block content %}{% endblock %}
+
+        <!-- scripts -->
+        <!-- JQuery -->
+        <script src="{% static 'app/mdb/js/jquery-3.2.1.min.js' %}"></script>
+           
+        <!-- Bootstrap tooltips -->
+        <script src="{% static 'app/mdb/js/popper.min.js' %}"></script>
+        <!-- Bootstrap core JavaScript -->
+        <script src="{% static 'app/mdb/js/bootstrap.min.js' %}" async></script>
+        <!-- MDB core JavaScript -->
+        <script src="{% static 'app/mdb/js/mdb.min.js' %}"></script>
+        <!--Initializations-->
+        <script>
+
+        </script>
+
+        {% leaflet_js %}
+
+        <script src="{% static 'app/scripts/js/Chart.js' %}"></script>
+        <script src="{% static 'app/scripts/js/leaflet.ajax.min.js' %}"></script>
+        <script src="{% static 'app/scripts/js/L.Control.Sidebar.js' %}"></script>
+        <script src="{% static 'app/scripts/js/leaflet-button.js' %}"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.34/moment-timezone-with-data.min.js"></script>
+        
+        <div id="left-divider" class="divider"></div>
+        <div id="right-divider" class="divider"></div>
+        {% block scripts %}{% endblock %}
+    </body>
+</html>

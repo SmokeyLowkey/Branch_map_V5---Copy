@@ -1,0 +1,646 @@
+{% extends "app/layout.html" %}
+
+{% load leaflet_tags %}
+
+{% load geojson_tags %}
+
+{% block content %}
+
+{% leaflet_map "main" callback="window.main_map_init" %}
+
+<style>
+.leaflet-container {  /* all maps */
+    width:  100%;
+    /* height: calc(100vh - 60px); */
+    height: 100vh;
+}
+
+.legend, .temporal-legend {
+    padding: 6px 10px;
+    font: 14px/16px Arial, Helvetica, sans-serif;
+    background: rgba(0,0,0,0.85);
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border-radius: 5px;
+    color:whitesmoke;
+}
+
+#legendTitle {
+    text-align: center;
+    margin-bottom: 15px;
+    color: whitesmoke;
+    /* font-variant: small-caps; */
+    font-weight: bold;
+}
+
+
+.symbolsContainer {
+    float: left;
+    margin-left: 50px;
+}
+
+.legendCircle {
+    border-radius:50%;
+    border: 1px solid #537898;
+    background: rgba(0,128,128,0.5);
+    display: inline-block;
+}
+
+.legendValue {
+    position: absolute;
+    right: 12px;
+    color:whitesmoke;
+    font-size:10pt;
+    text-align:center;
+    font-weight: bold;
+}
+
+.info {
+    width:30vw;
+    height:48vh;
+    /* width:20vw; */
+    /* height:300px; */
+    padding: 6px 10px;
+    font: 14px/16px Arial, Helvetica, sans-serif;
+    background: rgba(0,0,0,0.85);
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border-radius: 5px;
+    color:whitesmoke;
+    /* max-width:100%;
+    max-height:100%; */
+}
+
+.info h6 {
+    margin: 0 0 5px;
+    color: #777;
+    text-align: center;
+    /* margin-bottom: 15px; */
+    color: whitesmoke;
+    /* font-variant: small-caps; */
+    font-weight: bold;
+}
+
+
+.leaflet-control-layers {
+    float:none;
+    top:0px;
+    width: 100px;
+    right:0;
+    margin-left:-200px;
+    position: absolute;
+    background: rgba(0,0,0,0.85);
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border-radius: 5px;
+    color:whitesmoke;
+}
+
+
+
+</style>
+
+<script type="text/javascript">
+    var rightSidebar;
+    var newSidebar;
+    // Initialize maxZIndex variable to keep track of the highest z-index
+    // var maxZIndex = 1000;  // Start with the initial z-index value you've set in CSS
+    function openBranchInfo(Branch_Id) {
+    // Populate the right sidebar with information about the branch with the given ID
+    $.ajax({
+        url: `/get_branch_info/${Branch_Id}/`,
+        method: "GET",
+        success: function(data) {
+            var sidebarContent = document.getElementById("sidebar-content");
+            sidebarContent.innerHTML = `<h6>Branch: ${Branch_Id}</h6>`;
+            for (const [key, value] of Object.entries(data)) {
+                // const formattedValue = value.split("|").join('<br>'); // Replace newline characters with <br>
+                sidebarContent.innerHTML += `<h5><strong>${key}:</strong></h5> <p>${value}</p><br>`;
+            }
+            
+        },
+        error: function(error) {
+            // console.log("Error fetching data: ", error);
+        }
+    });
+}
+    var branchArray = [];
+    function populateSidebar() {
+    // Sort the array based on Branch_Id
+    branchArray.sort((a, b) => {
+        if (a.id < b.id) return -1;
+        if (a.id > b.id) return 1;
+        return 0;
+    });
+
+    // Populate the list
+    var ol = document.getElementById("branch-list");
+    features.forEach(function(feature) {
+        // console.log("Setting currentBranchId to ", feature.properties.Branch_Id);  // Debug log
+        var li = document.createElement("li");
+        li.appendChild(document.createTextNode(feature.properties.Branch_Id + ": " + feature.properties.Branch_Name));
+        
+        // Attach a click event listener to each list item
+        li.addEventListener("click", function() {
+            currentBranchId = feature.properties.Branch_Id;  // Update the global variable
+            openBranchInfo(feature.properties.Branch_Id);
+            populateNewSidebar(feature.properties.Branch_Id);
+            if (!rightSidebar._visible){
+                rightSidebar.show();
+            } else {
+                console.log("Right sidebar already open.");
+            }
+            if (!newSidebar._visible){
+                newSidebar.show();
+            }else {
+                console.log("Contact sidebar already open.");
+            }
+        });
+        ol.appendChild(li); 
+    });
+}
+function populateNewSidebar(branchId) {
+                var newSidebarContent = document.getElementById("new-sidebar-content");
+                
+                // Check if the sidebar is already populated
+                
+                newSidebarContent.innerHTML = "";
+                
+                $.ajax({
+                    url: `/get_branch_contact/${branchId}/`,
+                    method: "GET",
+                    success: function(data) {
+                        // Create a title for the sidebar
+                        var title = document.createElement("h6");
+                        title.textContent = `Branch: ${branchId}`;
+                        newSidebarContent.appendChild(title);
+
+                        // Loop through each data field and create HTML elements
+                        for (const [key, value] of Object.entries(data)) {
+                            if (key !== 'Name' && key !== 'Branch_Id') {  // Exclude Branch_Id and Name as per your requirement
+                                var fieldContainer = document.createElement("div");
+                                fieldContainer.className = "field-container";
+
+                                var fieldTitle = document.createElement("h2");
+                                fieldTitle.className = "field-title";
+                                fieldTitle.textContent = key;
+
+                                var fieldValue = document.createElement("p");
+                                fieldValue.className = "field-value";
+                                // Format the value to replace "|" with <br>
+                                // const formattedValue = value.split("|").join('<br>');
+                                
+                                // Set the formatted value as innerHTML to interpret <br> as HTML
+                                fieldValue.innerHTML = `<h3><strong>${key}:</strong></h3> <p>${value}</p><br>`;
+                                // Append title and value to the container
+                                // fieldContainer.appendChild(fieldTitle);
+                                fieldContainer.appendChild(fieldValue);
+
+                                // Append the container to the sidebar
+                                newSidebarContent.appendChild(fieldContainer);
+                            }
+                        }
+                    },
+                    error: function(error) {
+                        // console.log("Error fetching data: ", error);
+                        newSidebarContent.innerHTML = "<p>Error loading branch data.</p>";
+                    }
+                });
+            }
+
+function main_map_init(map, options) {
+           
+        // Define variables for division datasets
+        var CFDataset= null;
+        var TTDataset = null;
+        
+        function resetSidebar() {
+            var ol = document.getElementById("branch-list");
+            while (ol.firstChild) {
+                ol.removeChild(ol.lastChild);
+            }
+        }
+
+        function populateSidebar(features) {
+            resetSidebar();
+            var ol = document.getElementById("branch-list");
+            ol.innerHTML = ""; // Clear previous list items
+
+            // Sort features by Branch_Id
+            features.sort((a, b) => {
+                const idA = a.properties.Branch_Id;
+                const idB = b.properties.Branch_Id;
+                if (idA < idB) return -1;
+                if (idA > idB) return 1;
+                return 0;
+            });
+
+            features.forEach(function(feature) {
+                // console.log("Setting currentBranchId to ", feature.properties.Branch_Id);  // Debug log
+                var li = document.createElement("li");
+                li.appendChild(document.createTextNode(feature.properties.Branch_Id + ": " + feature.properties.Branch_Name));
+                li.addEventListener("click", function() {
+                    // console.log("List item clicked");  // Debug Step 1
+                    
+                    openBranchInfo(feature.properties.Branch_Id);
+                    populateNewSidebar(feature.properties.Branch_Id);
+                    // Pan the map to the clicked marker and zoom in
+                    var latlng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]); // Assuming GeoJSON format
+                    // console.log("Latlng for flyTo: ", latlng);  // Debug Step 2
+                    // console.log("Before flyTo: ", map.getCenter());  // Debug Step 3
+                    map.flyTo(latlng, 12, {
+                        animate: true,
+                        duration: 1.5
+                    });
+
+                    // console.log("After flyTo: ", map.getCenter());  // Debug Step 3
+                    map.invalidateSize();
+                    
+                    // map.setZoom(15);  // Adjust the zoom level as you like
+                    
+                    // Show the right sidebar if it's not visible
+                    if (!rightSidebar._visible) {
+                        rightSidebar.show();
+                    }
+                    if (!newSidebar._visible){
+                            newSidebar.show();
+                    }else {
+                        console.log("Contact sidebar already open.");
+                    }
+                });
+                ol.appendChild(li);
+            });
+        }
+        function updateSidebar() {
+            var allFeatures = [];
+            if (map.hasLayer(CFDataset)) {
+                allFeatures = allFeatures.concat(CFDataset.getLayers().map(layer => layer.feature));
+            }
+            if (map.hasLayer(TTDataset)) {
+                allFeatures = allFeatures.concat(TTDataset.getLayers().map(layer => layer.feature));
+            }
+
+            // Filter features to only include those that are currently visible
+            var bounds = map.getBounds();
+            var visibleFeatures = allFeatures.filter(function(feature) {
+                var latlng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]); // Assuming GeoJSON format
+                // console.log("Attempting to zoom to: ", latlng);  // Debug log
+                return bounds.contains(latlng);
+            });
+
+            populateSidebar(visibleFeatures);
+        }   
+        
+        function generatePopupContent(feature) {
+            var currentUTC = new Date(); // Current UTC time
+            var timeZone = feature.properties.Time_Zone; // Get the timezone from the feature properties
+
+            // Format the time to the local time of the timezone
+            var options = { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short', timeZone: timeZone };
+            var localTime = new Intl.DateTimeFormat('en-US', options).format(currentUTC);
+
+            // Generate popup content with local time
+            var popupContent = "<strong>" + feature.properties.Branch_Name + "</strong><br>" +
+                            "" + feature.properties.Branch_Id + "<br>" +
+                            "Local Time: " + localTime; // Include the local time
+            return popupContent;
+        }
+        function refreshPopupContent() {
+            map.eachLayer(function(layer) {
+                if (layer.getPopup && layer.getPopup() && layer.getPopup().isOpen()) {
+                    var popupContent = generatePopupContent(layer.feature);
+                    layer.setPopupContent(popupContent);
+                }
+            });
+        }
+
+        // Set interval to refresh popup content every second
+        setInterval(refreshPopupContent, 1000);
+
+
+        document.getElementById("CFDivision").addEventListener("change", function() {
+            if (!this.checked && CFDataset) {
+                map.removeLayer(CFDataset);
+                updateSidebar();
+            }
+            if(this.checked) {
+                // Load and add C&F Division dataset to map
+                CFDataset = new L.GeoJSON.AJAX("/division_dataset/CF", {
+                    pointToLayer: function(feature, latlng) {
+                        return L.circleMarker(latlng, {
+                            radius: 8,
+                            fillColor: 'red',
+                            color: '#537898',
+                            weight: 1,
+                            fillOpacity: 1,
+                        });
+                        
+                    },
+                    onEachFeature: function(feature, layer) {
+                    layer.on('mouseover', function() {
+                        var popupContent = generatePopupContent(feature);
+                        layer.bindPopup(popupContent).openPopup();
+                    });
+                    layer.on('click', function() {
+                        var popupContent = generatePopupContent(feature);
+                        layer.bindPopup(popupContent).openPopup();
+                    });
+
+                    // Add click event to layer (marker)
+                    layer.on('click', function(e) {
+                        currentBranchId = feature.properties.Branch_Id;
+                        openBranchInfo(feature.properties.Branch_Id);
+                        populateNewSidebar(feature.properties.Branch_Id);
+                        if (!rightSidebar._visible){
+                            rightSidebar.show();
+                            map.invalidateSize();
+                        } else {
+                            console.log("Right sidebar already open.");
+                        }
+                        if (!newSidebar._visible){
+                            newSidebar.show();
+                        }else {
+                            console.log("Contact sidebar already open.");
+                        }
+                        
+                    });
+
+                    // Add mouseover and mouseout event handlers here
+                    layer.on({
+                        mouseover: function(e) {
+                            var popupText = generatePopupContent(feature); // Generate popup content dynamically
+                            e.target.bindPopup(popupText).openPopup();
+                        },
+                        mouseout: function(e) {
+                            layer.setStyle({color: '#537898'});
+                            layer.closePopup();
+                        }
+                    });
+                },
+                }).addTo(map);
+                CFDataset.on('data:loaded', function() {
+                    updateSidebar(); // Clear existing list
+                    
+                });
+            } else {
+                if (CFDataset) {
+                    map.removeLayer(CFDataset);
+                    resetSidebar();
+                    
+                    
+                }
+            }
+        });
+
+        document.getElementById("TTDivision").addEventListener("change", function() {
+            if (!this.checked && TTDataset) {
+                map.removeLayer(TTDataset);
+                updateSidebar();  // Update the sidebar after removal
+            }
+            
+            if(this.checked) {
+                // Load and add T&T Division dataset to map
+                TTDataset = new L.GeoJSON.AJAX("/division_dataset/TT", {
+                    pointToLayer: function(feature, latlng) {
+                        return L.circleMarker(latlng, {
+                            radius: 8,
+                            fillColor: 'blue',
+                            color: '#537898',
+                            weight: 1,
+                            fillOpacity: 1,
+                        });
+                    },
+                    onEachFeature: function(feature, layer) {
+                    layer.on('mouseover', function() {
+                        var popupContent = generatePopupContent(feature);
+                        layer.bindPopup(popupContent).openPopup();
+                    });
+                    layer.on('click', function() {
+                        var popupContent = generatePopupContent(feature);
+                        layer.bindPopup(popupContent).openPopup();
+                    });
+
+                    // Add click event to layer (marker)
+                    layer.on('click', function(e) {
+                        currentBranchId = feature.properties.Branch_Id;
+                        openBranchInfo(feature.properties.Branch_Id);
+                        populateNewSidebar(feature.properties.Branch_Id);
+                        if (!rightSidebar._visible){
+                            rightSidebar.show();
+                            map.invalidateSize();
+                        } else {
+                            console.log("Info sidebar already open.");
+                        }
+                        if (!newSidebar._visible){
+                            newSidebar.show();
+                        }else {
+                            console.log("Contact sidebar already open.");
+                        }
+                    });
+                    
+
+                    // Add mouseover and mouseout event handlers here
+                    layer.on({
+                        mouseover: function(e) {
+                            var popupText = generatePopupContent(feature); // Generate popup content dynamically
+                            e.target.bindPopup(popupText).openPopup();
+                        },
+                        mouseout: function(e) {
+                            layer.setStyle({color: '#537898'});
+                            layer.closePopup();
+                        }
+                    });
+                },
+                }).addTo(map);
+                TTDataset.on('data:loaded', function() {
+                    updateSidebar(); // Clear existing list
+                    
+                });
+            } else {
+                if (TTDataset) {
+                    map.removeLayer(TTDataset);
+                    resetSidebar();
+                    
+                    
+                }
+            }
+        });
+        
+
+        const DEFAULT_CENTER = [50.245760329913246, -89.29954449812207];
+        const DEFAULT_ZOOM = 4; 
+
+        // Attach click event to existing Reset View button
+        document.querySelector('.leaflet-control-zoom-out[title="Reset view"]').addEventListener('click', function(e) {
+            e.preventDefault();
+            // console.log("Before Reset: ", map.getCenter());
+            map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+            // console.log("After Reset: ", map.getCenter());
+        });
+
+        document.getElementById("left-exit-button").addEventListener("click", function() {
+            rightSidebar.hide();  // Replace 'sidebar' with your actual sidebar variable
+            });
+
+        document.getElementById("new-exit-button").addEventListener("click", function() {
+            newSidebar.hide();
+        });
+
+        // For rightSidebar
+        document.getElementById("right-fullscreen-button").addEventListener("click", function() {
+            var rightSidebarElement = document.getElementById("sidebar-right");
+            rightSidebarElement.classList.toggle('limited-expand');
+            if (rightSidebarElement.classList.contains('limited-expand')) {
+                rightSidebarElement.style.zIndex = 10000;
+            } else {
+                rightSidebarElement.style.zIndex = 1000;
+            }
+            // For Exit buttons
+            document.getElementById("left-exit-button").addEventListener("click", function() {
+                var rightSidebarElement = document.getElementById("sidebar-right");
+                rightSidebarElement.classList.remove('limited-expand');
+                rightSidebarElement.style.zIndex = 1000;
+                rightSidebar.hide();  
+            });
+        });
+
+        // For newSidebar
+        document.getElementById("new-fullscreen-button").addEventListener("click", function() {
+            var newSidebarElement = document.getElementById("new-sidebar");
+            newSidebarElement.classList.toggle('limited-expand');
+            if (newSidebarElement.classList.contains('limited-expand')) {
+                newSidebarElement.style.zIndex = 10000;
+            } else {
+                newSidebarElement.style.zIndex = 1000;
+            }
+            document.getElementById("new-exit-button").addEventListener("click", function() {
+                var newSidebarElement = document.getElementById("new-sidebar");
+                newSidebarElement.classList.remove('limited-expand');
+                newSidebarElement.style.zIndex = 1000;
+                newSidebar.hide();
+            });
+        });
+
+        document.querySelectorAll('.leaflet-control').forEach(control => {
+            control.addEventListener('click', function() {
+                document.getElementById('sidebar').style.zIndex = "1500";
+                document.getElementById('new-sidebar').style.zIndex = "1600";
+            });
+        });
+            
+        rightSidebar = L.control.sidebar('sidebar-right', 'branch-info', {
+            closeButton: false,
+            position: 'right'
+        }).addTo(map);
+
+        var sidebar = L.control.sidebar('sidebar','list',{
+            closeButton: false,
+            position: 'left',
+            zIndex: 50,
+        }).addTo(map).show();
+
+        var newSidebar = L.control.sidebar('new-sidebar', 'contact',{
+            closeButton: false,
+            position: 'right'  // or 'right'
+        }).addTo(map);  
+
+        //contact button
+        var Contact_button = new L.Control.Button('Contact', 'contact', {
+            toggleButton: 'active',
+            position: 'topleft',
+        }); 
+        Contact_button.addTo(map);
+        Contact_button.on('click', function() {
+            if (rightSidebar._visible) {  // Check if rightSidebar is visible
+                rightSidebar.hide();  // Hide the rightSidebar
+            }
+            newSidebar.toggle();  // Toggle the newSidebar
+        });
+
+        //Branchinfo button
+        var waterBtn = new L.Control.Button('BranchInfo', 'info', {
+            toggleButton: 'active',
+            position: 'topleft',
+        });
+        waterBtn.addTo(map);
+        waterBtn.on('click', function() {
+            if (newSidebar._visible) {  // Check if newSidebar is visible
+                newSidebar.hide();  // Hide the newSidebar
+            }
+            rightSidebar.toggle();  // Toggle the rightSidebar
+        });
+
+        
+        // logout button
+        var logoutBtn = new L.Control.Button('Log Out','logout',{
+            toggleButton: 'active',
+            position: 'topleft',
+        });
+        logoutBtn.addTo(map);
+        logoutBtn.on('click', function() {
+            // Redirect to Django logout URL
+            window.location.href = "/logout/";
+        });
+
+        
+        function handleCheckboxChange() {
+            var CFChecked = document.getElementById("CFDivision").checked;
+            var TTChecked = document.getElementById("TTDivision").checked;
+
+            if (CFChecked && TTChecked) {
+                if (CFDataset && !map.hasLayer(CFDataset)) {
+                    CFDataset.addTo(map);
+                }
+                if (TTDataset && !map.hasLayer(TTDataset)) {
+                    TTDataset.addTo(map);
+                }
+            } else if (CFChecked) {
+                if (TTDataset && map.hasLayer(TTDataset)) {
+                    map.removeLayer(TTDataset);
+                }
+                if (CFDataset && !map.hasLayer(CFDataset)) {
+                    CFDataset.addTo(map);
+                }
+            } else if (TTChecked) {
+                if (CFDataset && map.hasLayer(CFDataset)) {
+                    map.removeLayer(CFDataset);
+                }
+                if (TTDataset && !map.hasLayer(TTDataset)) {
+                    TTDataset.addTo(map);
+                }
+            } else {
+                if (CFDataset && map.hasLayer(CFDataset)) {
+                    map.removeLayer(CFDataset);
+                }
+                if (TTDataset && map.hasLayer(TTDataset)) {
+                    map.removeLayer(TTDataset);
+                }
+            }
+
+            updateSidebar();
+        }
+        
+        map.on('moveend', function() {
+            map.invalidateSize();
+            updateSidebar();
+        });
+        document.addEventListener("DOMContentLoaded", function() {
+        // Your existing code here.
+        const rightFullscreenButton = document.getElementById("right-fullscreen-button");
+        const newFullscreenButton = document.getElementById("new-fullscreen-button");
+
+        if (rightFullscreenButton && newFullscreenButton) { // Check if elements are null
+            console.log("Elements found, attaching event listeners");
+            rightFullscreenButton.addEventListener("click", function() {
+                console.log("Right fullscreen button clicked");
+                // Your existing logic here.
+            });
+            newFullscreenButton.addEventListener("click", function() {
+                console.log("New fullscreen button clicked");
+                // Your existing logic here.
+            });
+        } else {
+            console.log("Elements not found");
+        }
+    });    
+    }
+</script>
+
+{% endblock %}
