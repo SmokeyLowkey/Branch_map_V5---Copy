@@ -568,15 +568,16 @@ function main_map_init(map, options) {
         });
 
         
-        // logout button
-        var logoutBtn = new L.Control.Button('Log Out','logout',{
+        // Dashboard button
+        var dashboardBtn = new L.Control.Button('Dashboard', 'dashboard', {
             toggleButton: 'active',
             position: 'topleft',
         });
-        logoutBtn.addTo(map);
-        logoutBtn.on('click', function() {
-            // Redirect to Django logout URL
-            window.location.href = "/logout/";
+
+        dashboardBtn.addTo(map);
+        dashboardBtn.on('click', function() {
+            // Redirect to the admin panel
+            window.location.href = "/admin/";
         });
 
         
